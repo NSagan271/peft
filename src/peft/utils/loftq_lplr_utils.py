@@ -3,7 +3,7 @@ import torch
 import logging
 from typing import Union
 
-from weight_compressors import alternating_mixed_lplr
+from lplr.weight_compressors import alternating_mixed_lplr
 from peft.utils.quantization_utils import NFQuantizerFactory
 
 @torch.no_grad()

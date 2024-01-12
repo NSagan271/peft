@@ -1,8 +1,5 @@
 import torch
-import numpy as np
-from scipy import stats
-from enum import Enum
-from quantization import *
+from lplr.quantization import *
 
 class NFQuantizer(AbstractQuantizer):
     def __init__(self, num_bits=2, device="cuda", method="normal", block_size=64, *args, **kwargs):
