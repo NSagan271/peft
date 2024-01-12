@@ -20,6 +20,7 @@ from typing import List, Literal, Optional, Union
 
 from peft.config import PeftConfig
 from peft.utils import PeftType
+from peft.utils.quantization_utils import NFQuantizerFactory
 
 
 @dataclass
@@ -39,6 +40,13 @@ class LoftQConfig:
 
     loftq_bits: int = field(default=4, metadata={"help": "Quantization bits for LoftQ"})
     loftq_iter: int = field(default=1, metadata={"help": "Alternating iterations for LoftQ"})
+    quantizer_factory: NFQuantizerFactory = field(default=NFQuantizerFactory(), metadata={"help": "Factory object for quantizer"})
+
+@dataclass
+class LoftQLplrConfig(LoftQConfig):
+    lplr_bits: int = field(default=8, metadata={"help": "Quantization bits for LPLR factors"})
+    lplr_iter: int = field(default=20, metadata={"help": "Alternating iterations for LPLR"})
+    lplr_num_full_precision_factors: int = field(default=0, metadata={"help": "Number of LPLR factors to store in full precision"})
 
 
 @dataclass
@@ -202,6 +210,16 @@ class LoraConfig(PeftConfig):
         },
     )
 
+    loftq_lplr_config: Union[LoftQLplrConfig, dict] = field(
+        default_factory=dict,
+        metadata={
+            "help": (
+                "The configuration of LoftQ-LPLR. If this is not None, then LoftQ-LPLR will be used to quantize "
+                " the backbone weights and initialize Lora layers."
+            )
+        },
+    )
+
     def __post_init__(self):
         self.peft_type = PeftType.LORA
         self.target_modules = (
@@ -223,7 +241,17 @@ class LoraConfig(PeftConfig):
                 raise ImportError("The required package 'scipy' is not installed. Please install it to continue.")
             if self.loftq_config is None:
                 raise ValueError("`loftq_config` must be specified when `init_lora_weights` is 'loftq'.")
+        elif self.init_lora_weights == "loftq-lplr":
+            import importlib
+
+            if not importlib.util.find_spec("scipy"):
+                raise ImportError("The required package 'scipy' is not installed. Please install it to continue.")
+            if self.loftq_lplr_config is None:
+                raise ValueError("`loftq_lplr_config` must be specified when `init_lora_weights` is 'loftq-lplr'.")
 
         # convert loftq_config to dict
         if self.loftq_config is not None and not isinstance(self.loftq_config, dict):
             self.loftq_config = vars(self.loftq_config)
+
+        if self.loftq_lplr_config is not None and not isinstance(self.loftq_lplr_config, dict):
+            self.loftq_lplr_config = vars(self.loftq_lplr_config)

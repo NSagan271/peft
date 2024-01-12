@@ -1,0 +1,3 @@
+[submodule "winter24-lplr-extension"]
+	path = winter24-lplr-extension
+	url = git@github.com:NSagan271/winter24-lplr-extension.git

@@ -25,7 +25,8 @@ from transformers import (
     AutoTokenizer,
 )
 
-from peft import LoftQConfig, LoraConfig, TaskType, get_peft_model
+from peft import LoftQConfig, LoftQLplrConfig, LoraConfig, TaskType, get_peft_model
+from peft.utils.quantization_utils import NFQuantizerFactory
 
 
 class Shell(nn.Module):
@@ -115,6 +116,39 @@ def arg_parse():
         default="./model_zoo/loftq/",
         help="The rank of the LoRA adapter",
     )
+    parser.add_argument(
+        "--use_lplr",
+        action='store_true',
+        help='If set, the SVD step of LoftQ is replaced with LPLR'
+    )
+    parser.add_argument(
+        "--lplr_bits",
+        type=int,
+        default=8,
+        help='If use_lplr is set, this specifies the bit precision of the low-rank factors'
+    )
+    parser.add_argument(
+        "--lplr_iter",
+        type=int,
+        default=20,
+        help='If use_lplr is set, this specifies the number of alternating LPLR steps'
+    )
+    parser.add_argument(
+        "--lplr_num_full_precision_factors",
+        type=int,
+        default=0,
+        help='If use_lplr is set, this specifies the number of  factors to keep in full precision'
+    )
+    parser.add_argument(
+        "--uniform_quant",
+        action='store_true',
+        help='Use uniform quantization instead of Normal float'
+    )
+    parser.add_argument(
+        "--low_memory_quant",
+        action='store_true',
+        help='Use a lower-memory quantizer implementation'
+    )
     args = parser.parse_args()
     return args
 
@@ -140,20 +174,47 @@ def quantize_and_save():
         target_modules = ["query_proj", "key_proj", "value_proj", "dense"]  # embeddings not supported by peft
     else:
         raise NotImplementedError("Other models not supported yet.")
+    
+    quant_factory = NFQuantizerFactory(
+        method="uniform" if args.uniform_quant else "normal",
+        low_memory_quantizer=args.low_memory_quant
+    )
 
     # Config of LoftQ
-    loftq_config = LoftQConfig(loftq_bits=args.bits, loftq_iter=args.iter)
+    if args.use_lplr:
+        loftq_lplr_config = LoftQLplrConfig(
+            loftq_bits=args.bits, loftq_iter=args.iter,
+            lplr_bits=args.lplr_bits, lplr_iter=args.lplr_iter,
+            lplr_num_full_precision_factors=args.lplr_num_full_precision_factors,
+            quantizer_factory=quant_factory
+        )
+        
+        lora_config = LoraConfig(
+            task_type=task_type,
+            inference_mode=True,
+            r=args.rank,
+            lora_alpha=16 if task_type is TaskType.CAUSAL_LM else args.rank,
+            lora_dropout=0.1,
+            target_modules=target_modules,
+            init_lora_weights="loftq-lplr",
+            loftq_lplr_config=loftq_lplr_config,
+        )
+    else:
+        loftq_config = LoftQConfig(
+            loftq_bits=args.bits, loftq_iter=args.iter,
+            quantizer_factory=quant_factory
+        )
 
-    lora_config = LoraConfig(
-        task_type=task_type,
-        inference_mode=True,
-        r=args.rank,
-        lora_alpha=16 if task_type is TaskType.CAUSAL_LM else args.rank,
-        lora_dropout=0.1,
-        target_modules=target_modules,
-        init_lora_weights="loftq",
-        loftq_config=loftq_config,
-    )
+        lora_config = LoraConfig(
+            task_type=task_type,
+            inference_mode=True,
+            r=args.rank,
+            lora_alpha=16 if task_type is TaskType.CAUSAL_LM else args.rank,
+            lora_dropout=0.1,
+            target_modules=target_modules,
+            init_lora_weights="loftq",
+            loftq_config=loftq_config,
+        )
 
     # Obtain LoftQ model
     lora_model = get_peft_model(model, lora_config)

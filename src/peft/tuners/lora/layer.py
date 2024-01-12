@@ -96,6 +96,8 @@ class LoraLayer(BaseTunerLayer):
 
         if init_lora_weights == "loftq":
             self.loftq_init(adapter_name)
+        elif init_lora_weights == "loftq-lplr":
+            self.loftq_lplr_init(adapter_name)
         elif init_lora_weights:
             self.reset_lora_parameters(adapter_name, init_lora_weights)
 
@@ -132,15 +134,43 @@ class LoraLayer(BaseTunerLayer):
 
     def loftq_init(self, adapter_name):
         from peft.utils.loftq_utils import loftq_init
+        from peft.utils.quantization_utils import NFQuantizerFactory
 
         weight = self.get_base_layer().weight
         kwargs = {
             "num_bits": self.kwargs.get("loftq_bits", 4),
             "reduced_rank": self.r[adapter_name],
             "num_iter": self.kwargs.get("loftq_iter", 1),
+            "quantizer_factory": self.kwargs.get("quantizer_factory", NFQuantizerFactory())
         }
 
         qweight, lora_A, lora_B = loftq_init(weight, **kwargs)
+        if adapter_name in self.lora_A.keys():
+            # initialize A the same way as the default for nn.Linear and B to zero
+            self.lora_A[adapter_name].weight.data = lora_A
+            self.lora_B[adapter_name].weight.data = lora_B
+        if adapter_name in self.lora_embedding_A.keys():
+            # initialize a the same way as the default for nn.linear and b to zero
+            self.lora_embedding_A[adapter_name].weight.data = lora_A
+            self.lora_embedding_B[adapter_name].weight.data = lora_B
+        self.get_base_layer().weight.data = qweight
+
+    def loftq_lplr_init(self, adapter_name):
+        from peft.utils.loftq_lplr_utils import loftq_lplr_init
+        from peft.utils.quantization_utils import NFQuantizerFactory
+
+        weight = self.get_base_layer().weight
+        kwargs = {
+            "num_bits": self.kwargs.get("loftq_bits", 4),
+            "reduced_rank": self.r[adapter_name],
+            "num_iter": self.kwargs.get("loftq_iter", 1),
+            "num_bits_factors": self.kwargs.get("lplr_bits", 8),
+            "quantizer_factory": self.kwargs.get("quantizer_factory", NFQuantizerFactory()),
+            "num_iter_lplr": self.kwargs.get("lplr_iter", 20),
+            "num_full_precision_factors": self.kwargs.get("lplr_num_full_precision_factors", 0)
+         }
+
+        qweight, lora_A, lora_B = loftq_lplr_init(weight, **kwargs)
         if adapter_name in self.lora_A.keys():
             # initialize A the same way as the default for nn.Linear and B to zero
             self.lora_A[adapter_name].weight.data = lora_A
@@ -370,6 +400,8 @@ class Embedding(nn.Module, LoraLayer):
 
         if init_lora_weights == "loftq":
             self.loftq_init(adapter_name)
+        elif init_lora_weights == "loftq-lplr":
+            self.loftq_lplr_init(adapter_name)
         elif init_lora_weights:
             self.reset_lora_parameters(adapter_name, init_lora_weights)
 
@@ -550,6 +582,8 @@ class Conv2d(nn.Module, LoraLayer):
 
         if init_lora_weights == "loftq":
             self.loftq_init(adapter_name)
+        elif init_lora_weights == "loftq-lplr":
+            self.loftq_lplr_init(adapter_name)
         elif init_lora_weights:
             self.reset_lora_parameters(adapter_name, init_lora_weights)
 
@@ -705,9 +739,11 @@ def dispatch_default(
         embedding_kwargs = kwargs.copy()
         embedding_kwargs.pop("fan_in_fan_out", None)
         embedding_kwargs.update(lora_config.loftq_config)
+        embedding_kwargs.update(lora_config.loftq_lplr_config)
         new_module = Embedding(target, adapter_name, **embedding_kwargs)
     elif isinstance(target_base_layer, torch.nn.Conv2d):
         kwargs.update(lora_config.loftq_config)
+        kwargs.update(lora_config.loftq_lplr_config)
         new_module = Conv2d(target, adapter_name, **kwargs)
     elif isinstance(target_base_layer, torch.nn.Linear):
         if kwargs["fan_in_fan_out"]:
@@ -717,6 +753,7 @@ def dispatch_default(
             )
             kwargs["fan_in_fan_out"] = lora_config.fan_in_fan_out = False
         kwargs.update(lora_config.loftq_config)
+        kwargs.update(lora_config.loftq_lplr_config)
         new_module = Linear(target, adapter_name, **kwargs)
     elif isinstance(target_base_layer, Conv1D):
         if not kwargs["fan_in_fan_out"]:
@@ -724,6 +761,7 @@ def dispatch_default(
                 "fan_in_fan_out is set to False but the target module is `Conv1D`. " "Setting fan_in_fan_out to True."
             )
             kwargs["fan_in_fan_out"] = lora_config.fan_in_fan_out = True
+        kwargs.update(lora_config.loftq_config)
         kwargs.update(lora_config.loftq_config)
         new_module = Linear(target, adapter_name, is_target_conv_1d_layer=True, **kwargs)
 
