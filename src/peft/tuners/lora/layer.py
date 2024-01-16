@@ -27,6 +27,8 @@ from peft.utils.other import transpose
 
 from .config import LoraConfig
 
+from loguru import logger
+
 
 class LoraLayer(BaseTunerLayer):
     # All names of layers that may contain (trainable) adapter weights
@@ -144,6 +146,8 @@ class LoraLayer(BaseTunerLayer):
             "quantizer_factory": self.kwargs.get("quantizer_factory", NFQuantizerFactory())
         }
 
+        logger.info(f"Applying LoftQ on adapter_name: {adapter_name}")
+        
         qweight, lora_A, lora_B = loftq_init(weight, **kwargs)
         if adapter_name in self.lora_A.keys():
             # initialize A the same way as the default for nn.Linear and B to zero
@@ -158,6 +162,7 @@ class LoraLayer(BaseTunerLayer):
     def loftq_lplr_init(self, adapter_name):
         from peft.utils.loftq_lplr_utils import loftq_lplr_init
         from peft.utils.quantization_utils import NFQuantizerFactory
+        logger.info(f"Applying LoftQ-LPLR on adapter_name: {adapter_name}")
 
         weight = self.get_base_layer().weight
         kwargs = {

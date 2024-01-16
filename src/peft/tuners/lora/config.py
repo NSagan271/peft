@@ -42,6 +42,7 @@ class LoftQConfig:
     loftq_iter: int = field(default=1, metadata={"help": "Alternating iterations for LoftQ"})
     quantizer_factory: NFQuantizerFactory = field(default=NFQuantizerFactory(), metadata={"help": "Factory object for quantizer"})
 
+
 @dataclass
 class LoftQLplrConfig(LoftQConfig):
     lplr_bits: int = field(default=8, metadata={"help": "Quantization bits for LPLR factors"})

@@ -147,3 +147,6 @@ class NFQuantizerFactory(QuantizerFactory):
         if self.low_memory_quantizer:
             return LowMemoryQuantizer(num_bits=num_bits, method=self.method, block_size=self.block_size)
         return NFQuantizer(num_bits=num_bits, device=device, method=self.method, block_size=self.block_size)
+    
+    def __str__(self):
+        return f"NFQuantizerFactory(method={self.method}, low_mem={self.low_memory_quantizer}, block_size={self.block_size})"

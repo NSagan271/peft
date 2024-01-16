@@ -24,6 +24,8 @@ from functools import reduce
 from itertools import chain
 from typing import List, Optional
 
+from loguru import logger
+
 import torch
 from torch import nn
 from tqdm import tqdm
@@ -136,6 +138,8 @@ class LoraModel(BaseTuner):
         parent,
         current_key,
     ):
+        
+        logger.info(f"Adapting layer: {target_name}")
         if current_key is None:
             raise ValueError("Current Key shouldn't be `None`")
 
