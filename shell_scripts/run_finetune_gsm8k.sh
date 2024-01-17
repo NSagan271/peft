@@ -37,9 +37,9 @@
 #    --with_tracking \
 #    --report_to tensorboard
 
-accelerate launch --config_file default.yaml ../examples/loftq_finetuning/train_gsm8k_llama.py \
-    --model_name_or_path ../artifacts/loftq/Llama-2-7b-hf-4bit-16rank \
-    --output_dir exp_results/gsm8k/llama-7b-loftq-test \
+accelerate launch --config_file default.yaml ./examples/loftq_finetuning/train_gsm8k_llama.py \
+    --model_name_or_path ./artifacts/loftq/Llama-2-7b-hf-4bit-16rank \
+    --output_dir ./exp_results/gsm8k/llama-7b-loftq-test \
     --learning_rate 1e-4  \
     --weight_decay 0.1 \
     --lr_scheduler_type cosine \

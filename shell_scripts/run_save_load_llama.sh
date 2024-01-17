@@ -1,6 +1,6 @@
 #!/bin/bash
-SAVE_DIR="../artifacts/loftq/"
-python ../examples/loftq_finetuning/quantize_save_load.py \
+SAVE_DIR="./artifacts/loftq/"
+python ./examples/loftq_finetuning/quantize_save_load.py \
     --model_name_or_path "meta-llama/Llama-2-7b-hf" \
     --bits 4 \
     --iter 5 \
