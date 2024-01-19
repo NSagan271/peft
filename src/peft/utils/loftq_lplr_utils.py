@@ -74,7 +74,8 @@ def loftq_lplr_init(
         dequantized_weight = dequantized_weight.T
         L, R = R.T, L.T
 
-    lora_A, lora_B = R, L
+    lora_A, lora_B = R.contiguous(), L.contiguous()
+    dequantized_weight = dequantized_weight.contiguous()
 
     if log_errors:
         return dequantized_weight.to(device=device, dtype=dtype), lora_A, lora_B, errors
