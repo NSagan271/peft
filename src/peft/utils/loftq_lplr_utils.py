@@ -16,12 +16,16 @@ def loftq_lplr_init(
     quantizer_factory:NFQuantizerFactory = NFQuantizerFactory(),
     num_iter=1,
     num_iter_lplr=10,
+    device="cuda",
     log_errors=False 
 ):
     if num_bits not in [2, 4, 8]:
         raise ValueError("Only support 2, 4, 8 bits quantization")
     if num_iter <= 0:
         raise ValueError("Number of iterations must be greater than 0")
+    
+    output_device = weight.device
+    weight = weight.to(device)
     
     n, d = weight.size()
     transposed_weight = False
@@ -78,7 +82,7 @@ def loftq_lplr_init(
     dequantized_weight = dequantized_weight.contiguous()
 
     if log_errors:
-        return dequantized_weight.to(device=device, dtype=dtype), lora_A, lora_B, errors
+        return dequantized_weight.to(device=output_device, dtype=dtype), lora_A.to(output_device), lora_B.to(output_device), errors
 
-    return dequantized_weight.to(device=device, dtype=dtype), lora_A, lora_B
+    return dequantized_weight.to(device=output_device, dtype=dtype), lora_A.to(output_device), lora_B.to(output_device)
 

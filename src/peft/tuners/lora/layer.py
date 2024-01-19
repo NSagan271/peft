@@ -139,11 +139,15 @@ class LoraLayer(BaseTunerLayer):
         from peft.utils.quantization_utils import NFQuantizerFactory
 
         weight = self.get_base_layer().weight
+
+        quant_type = self.kwargs.get("quantization_type", "normal")
+        low_memory_quant = self.kwargs.get("low_memory_quantizer", False)
         kwargs = {
             "num_bits": self.kwargs.get("loftq_bits", 4),
             "reduced_rank": self.r[adapter_name],
             "num_iter": self.kwargs.get("loftq_iter", 1),
-            "quantizer_factory": self.kwargs.get("quantizer_factory", NFQuantizerFactory())
+            "quantizer_factory": NFQuantizerFactory(quant_type, low_memory_quant),
+            "device": self.kwargs.get("device", "cpu")
         }
 
         logger.info(f"Applying LoftQ on adapter_name: {adapter_name}")
@@ -165,14 +169,18 @@ class LoraLayer(BaseTunerLayer):
         logger.info(f"Applying LoftQ-LPLR on adapter_name: {adapter_name}")
 
         weight = self.get_base_layer().weight
+
+        quant_type = self.kwargs.get("quantization_type", "normal")
+        low_memory_quant = self.kwargs.get("low_memory_quantizer", False)
         kwargs = {
             "num_bits": self.kwargs.get("loftq_bits", 4),
             "reduced_rank": self.r[adapter_name],
             "num_iter": self.kwargs.get("loftq_iter", 1),
             "num_bits_factors": self.kwargs.get("lplr_bits", 8),
-            "quantizer_factory": self.kwargs.get("quantizer_factory", NFQuantizerFactory()),
+            "quantizer_factory": NFQuantizerFactory(quant_type, low_memory_quant),
             "num_iter_lplr": self.kwargs.get("lplr_iter", 20),
-            "num_full_precision_factors": self.kwargs.get("lplr_num_full_precision_factors", 0)
+            "num_full_precision_factors": self.kwargs.get("lplr_num_full_precision_factors", 0),
+            "device": self.kwargs.get("device", "cpu")
          }
 
         qweight, lora_A, lora_B = loftq_lplr_init(weight, **kwargs)

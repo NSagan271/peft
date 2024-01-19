@@ -53,6 +53,7 @@ def loftq_init(
     reduced_rank: int,
     num_iter=1,
     quantizer_factory:NFQuantizerFactory = NFQuantizerFactory(),
+    device="cuda",
     log_errors=False 
 ):
     if num_bits not in [2, 4, 8]:
@@ -61,7 +62,8 @@ def loftq_init(
         raise ValueError("Number of iterations must be greater than 0")
 
     out_feature, in_feature = weight.size()
-    device = weight.device
+    output_device = weight.device
+    weight = weight.to(device)
     dtype = weight.dtype
 
     logging.info(
@@ -110,6 +112,6 @@ def loftq_init(
     lora_A, lora_B = R, L
 
     if log_errors:
-        return dequantized_weight.to(device=device, dtype=dtype), lora_A, lora_B, errors
+        return dequantized_weight.to(device=output_device, dtype=dtype), lora_A.to(output_device), lora_B.to(output_device), errors
 
-    return dequantized_weight.to(device=device, dtype=dtype), lora_A, lora_B
+    return dequantized_weight.to(device=output_device, dtype=dtype), lora_A.o(output_device), lora_B.to(output_device)

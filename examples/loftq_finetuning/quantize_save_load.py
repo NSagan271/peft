@@ -149,6 +149,12 @@ def arg_parse():
         action='store_true',
         help='Use a lower-memory quantizer implementation'
     )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="cpu",
+        help="Device on which to perform LoftQ computations."
+    )
     args = parser.parse_args()
     return args
 
@@ -174,11 +180,6 @@ def quantize_and_save():
         target_modules = ["query_proj", "key_proj", "value_proj", "dense"]  # embeddings not supported by peft
     else:
         raise NotImplementedError("Other models not supported yet.")
-    
-    quant_factory = NFQuantizerFactory(
-        method="uniform" if args.uniform_quant else "normal",
-        low_memory_quantizer=args.low_memory_quant
-    )
 
     # Config of LoftQ
     if args.use_lplr:
@@ -186,7 +187,9 @@ def quantize_and_save():
             loftq_bits=args.bits, loftq_iter=args.iter,
             lplr_bits=args.lplr_bits, lplr_iter=args.lplr_iter,
             lplr_num_full_precision_factors=args.lplr_num_full_precision_factors,
-            quantizer_factory=quant_factory
+            quantization_type="uniform" if args.uniform_quant else "normal",
+            low_memory_quantizer=args.low_memory_quant,
+            device=args.device
         )
         
         lora_config = LoraConfig(
@@ -202,7 +205,9 @@ def quantize_and_save():
     else:
         loftq_config = LoftQConfig(
             loftq_bits=args.bits, loftq_iter=args.iter,
-            quantizer_factory=quant_factory
+            quantization_type="uniform" if args.uniform_quant else "normal",
+            low_memory_quantizer=args.low_memory_quant,
+            device=args.device
         )
 
         lora_config = LoraConfig(

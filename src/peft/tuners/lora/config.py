@@ -40,7 +40,10 @@ class LoftQConfig:
 
     loftq_bits: int = field(default=4, metadata={"help": "Quantization bits for LoftQ"})
     loftq_iter: int = field(default=1, metadata={"help": "Alternating iterations for LoftQ"})
-    quantizer_factory: NFQuantizerFactory = field(default=NFQuantizerFactory(), metadata={"help": "Factory object for quantizer"})
+    quantization_type: str = field(default="normal", metadata={"help": "Quantization scheme for LoftQ: \"normal\" or \"uniform\""})
+    low_memory_quantizer: bool = field(default=False, metadata={"help": "Whether to use an alternative quantizer implementation that requires"
+                                                                        "less GPU memory (only relevant if bitsandbytes is not used)."})
+    device: str = field(default="cpu", metadata={"help": "Device for LoftQ computations."})
 
 
 @dataclass
