@@ -370,11 +370,30 @@ def main():
                 args.dataset_config_name,
                 split=f"train[:{args.validation_split_percentage}%]",
             )
+            
+            # # ONLY ONE EVAL EXAMPLE
+            # raw_datasets["validation"] = load_dataset(
+            #     args.dataset_name,
+            #     args.dataset_config_name,
+            #     split="train[0:1]",
+            # )
             raw_datasets["train"] = load_dataset(
                 args.dataset_name,
                 args.dataset_config_name,
                 split=f"train[{args.validation_split_percentage}%:]",
             )
+        # else:
+        #     # ONLY ONE EVAL EXAMPLE
+        #     raw_datasets["validation"] = load_dataset(
+        #         args.dataset_name,
+        #         args.dataset_config_name,
+        #         split="train[0:1]",
+        #     )
+        #     raw_datasets["train"] = load_dataset(
+        #         args.dataset_name,
+        #         args.dataset_config_name,
+        #         split=f"train[1:]",
+        #     )
     else:
         data_files = {}
         dataset_args = {}
@@ -662,7 +681,7 @@ def main():
             path = os.path.basename(checkpoint_path)
 
         accelerator.print(f"Resumed from checkpoint: {checkpoint_path}")
-        accelerator.load_state(path)
+        accelerator.load_state(checkpoint_path)
         # Extract `epoch_{i}` or `step_{i}`
         training_difference = os.path.splitext(path)[0]
 
